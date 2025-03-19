@@ -7,9 +7,5 @@ run = "deno lint --fix"
 [tasks.format]
 run = "deno fmt"
 
-[tasks.puppeteer]
-run = "npx --yes puppeteer browsers install chrome"
-
 [tasks.run]
-depends = ['puppeteer']
 run = "deno run --allow-env --allow-net --allow-run --allow-sys --allow-read --allow-write main.ts"

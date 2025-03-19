@@ -1,4 +1,4 @@
-import puppeteer, { Page } from "npm:puppeteer";
+import { DOMParser } from "jsr:@b-fuze/deno-dom";
 
 type VideoData = {
   title: string;
@@ -22,28 +22,20 @@ const escapeXml = (str: string): string =>
       })[c] || c,
   );
 
-const launchBrowser = async () => {
-  return await puppeteer.launch();
-};
+const extractVideos = (document: Document): Partial<VideoData>[] => {
+  const items = Array.from(document.querySelectorAll("ol > li"));
 
-const extractVideos = async (page: Page): Promise<VideoData[]> => {
-  return await page.evaluate(() => {
-    return Array.from(document.querySelectorAll("ol > li")).map(
-      (element) => {
-        const title = element.querySelector("h2")?.textContent;
-        const description = element.querySelector("p:nth-of-type(2)")
-          ?.textContent;
-        const videoUrl = element
-          .querySelector("video")
-          ?.getAttribute("src");
+  return items.map((element) => {
+    const title = element.querySelector("h2")?.textContent ?? "";
+    const description =
+      element.querySelector("p:nth-of-type(2)")?.textContent ?? "";
+    const videoUrl = element.querySelector("video")?.getAttribute("src") ?? "";
 
-        return { title, description, videoUrl };
-      },
-    );
+    return { title, description, videoUrl };
   });
 };
 
-const processVideos = (rawVideos: VideoData[]): VideoData[] => {
+const processVideos = (rawVideos: Partial<VideoData>[]): VideoData[] => {
   return rawVideos
     .filter((video) => video.videoUrl)
     .map((video, index) => {
@@ -59,23 +51,15 @@ const scrapeVideos = async (
 ): Promise<VideoData[]> => {
   log(`Scraping videos from ${url}...`);
 
-  const browser = await launchBrowser();
+  const response = await fetch(url);
+  const html = await response.text();
+  const parser = new DOMParser();
+  const document = parser.parseFromString(html, "text/html");
+  const videos = extractVideos(document);
 
-  try {
-    const page = await browser.newPage();
-    await page.goto(url);
+  log(`Found ${videos.length} videos.`);
 
-    const videos = await extractVideos(page);
-
-    log(`Found ${videos.length} videos.`);
-
-    return processVideos(videos);
-  } catch {
-    error(`Scraping videos failed!`);
-    Deno.exit(1);
-  } finally {
-    await browser.close();
-  }
+  return processVideos(videos);
 };
 
 const generatePodcastFeed = async (): Promise<string> => {
