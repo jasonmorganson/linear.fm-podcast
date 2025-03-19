@@ -1,0 +1,14 @@
+[
+  {
+    "label": "Lint",
+    "command": "mise run lint"
+  },
+  {
+    "label": "Format",
+    "command": "mise run format"
+  },
+  {
+    "label": "Run",
+    "command": "mise run run"
+  }
+]
